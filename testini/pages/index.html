@@ -12,7 +12,7 @@
 
     <title>CriServ Dash</title>
     <style>
-        #mapid { height: 700px; }
+        #mapid { height: 500px; }
     </style>
 
     <!-- Bootstrap Core CSS -->
@@ -284,7 +284,7 @@
                             <!-- /input-group -->
                         </li>
                         <li>
-                            <a href="index.html"><i class="fa fa-dashboard fa-fw"></i> Cashboard</a>
+                            <a href="index.html"><i class="fa fa-dashboard fa-fw"></i> Dashboard</a>
                         </li>
                         <li>
                             <a href="#"><i class="fa fa-bar-chart-o fa-fw"></i> Charts<span class="fa arrow"></span></a>
@@ -414,17 +414,15 @@
                         <!-- /.panel-heading -->
                         <div class="panel-body">
                             <div id="mapid"></div>
-                            <button id="get-location">Get My Location</button><br>
-                            <button id="add-markers">Put Markers In</button>
-                            <input type="checkbox" id="maleCB">Males<br>
-                            <input type="checkbox" id="femaleCB">Hos<br>
+                            <input type="checkbox" checked id="maleCB">Males<br>
+                            <input type="checkbox" checked id="femaleCB">Hos<br>
                         </div>
                         <!-- /.panel-body -->
                     </div>
                     <!-- /.panel -->
                     <div class="panel panel-default">
                         <div class="panel-heading">
-                            <i class="fa fa-bar-chart-o fa-fw"></i> Bar Chart Example
+                            <i class="fa fa-bar-chart-o fa-fw"></i> Bobbity Booo
                             <div class="pull-right">
                                 <div class="btn-group">
                                     <button type="button" class="btn btn-default btn-xs dropdown-toggle" data-toggle="dropdown">
@@ -447,13 +445,7 @@
                         </div>
                         <!-- /.panel-heading -->
                         <div class="panel-body">
-                            <div class="row">
-                                <div class="col-lg-8">
-                                    <h1>Burld</h1>
-                                </div>
-                                <!-- /.col-lg-8 (nested) -->
-                            </div>
-                            <!-- /.row -->
+                           <div id="morris-line-chart"></div>
                         </div>
                         <!-- /.panel-body -->
                     </div>
@@ -798,6 +790,7 @@
     <!-- Custom Theme JavaScript -->
     <script src="../dist/js/sb-admin-2.js"></script>
     <script>
+    //firebase log in
     var config = {
         apiKey: "AIzaSyBoqQyQUITPs47wTMcusuoZwZW7STa1kG4",
         authDomain: "test-2bd2d.firebaseapp.com",
@@ -808,29 +801,28 @@
 
    
 
-
+        //map box log in + map initialization
      L.mapbox.accessToken = 'pk.eyJ1Ijoic21pbGV5bWlsZXkiLCJhIjoiY2lyM2N3djZyMDAxcmh5bTlhMG5tZWE5dCJ9.dtBACPE2xCuGEV9RoMQeqg';
     var mymap = L.mapbox.map('mapid', 'smileymiley.0pgneeb2', {
         zoom: 13
     });
 
    
-
+    //choose tile layer
     L.mapbox.tileLayer('mapbox.streets', {
     maxZoom: 18,
 }).addTo(mymap);
 
 
+    
+
+    //takes current location, adds it to map and database
     addCurrentLocationToMap = function() {
         if(navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(function(position){
                 var lat = position.coords.latitude;
                 var long = position.coords.longitude;
-                console.log('--- Your Position ---')
-                console.log('Lat: ' + lat);
-                console.log('Long: ' + long);
-                console.log('---------------------');
-
+                
                 var marker = L.marker([lat, long]).addTo(mymap);
                 marker.bindPopup('You are at:<br>' + lat + ', ' + long);
                 firebase.database().ref('locations/').push({
@@ -849,67 +841,81 @@
         }
     }
 
+    //jquery when you click on link
     $('#get-location').click(function(event) { 
         addCurrentLocationToMap();
     });
     
+    //booleans for whether we want to show males or females
     var males = true;
     var females = true;
 
+    //store markers here
+    var LGroup = L.layerGroup().addTo(mymap);
+
+    //adds all "pings" from database to map
     addMarkersToMap = function() {
+        //clear map
+        LGroup.clearLayers();
+
+        //get firebase data
         firebase.database().ref('locations').on('value', function(snapshot) {
+            //for loop
             snapshot.forEach(function(childSnapshot) {
-             // key will be "ada" the first time and "alan" the second time
-            key = childSnapshot.key;
-            // childData will be the actual contents of the child
-            childData = childSnapshot.val();
-            if(males) {
-                if(childData.gender == "male") {
-                    var theMarker = L.marker([childData.latitude, childData.longtitude]).addTo(mymap);
-                    theMarker.bindPopup(childData.COI);
+                key = childSnapshot.key;
+                childData = childSnapshot.val();
+                //if we want to display males
+                if(males) {
+                    //if "ping" is from a male
+                    if(childData.gender == "male") {
+                        var theMarker = L.marker([childData.latitude, childData.longtitude]);
+                        theMarker.bindPopup(childData.COI);
+                        LGroup.addLayer(theMarker);
+                        
+                    }
                 }
-            }
-            if(females) {
-                if(childData.gender == "female") {
-                    var theMarker = L.marker([childData.latitude, childData.longtitude]).addTo(mymap);
-                    theMarker.bindPopup(childData.COI);
-
+                if(females) {
+                    if(childData.gender == "female") {
+                        var theMarker = L.marker([childData.latitude, childData.longtitude]);
+                        theMarker.bindPopup(childData.COI);
+                        LGroup.addLayer(theMarker);
+                    }
                 }
-            }
-        
-
-            
             });
+
         });
     }
-        $('#get-location').click(function(event) { 
-            addCurrentLocationToMap();
-        });
-        $('#add-markers').click(function(event) { 
-        addMarkersToMap();
-        });
+       addMarkersToMap();
+        //checkbox changed
         $("#maleCB").change(function() {
-            alert("Workin");
             if(this.checked) {
                 males = true;
-                addMarkersToMap(); 
+                
             }
             else {
                 males = false;
-                addMarkersToMap();
             }
+            addMarkersToMap(); 
         });
          $("#femaleCB").change(function() {
             if(this.checked) {
                 females = true;
-                addMarkersToMap();
             }
             else {
                 females = false;
-                addMarkersToMap();
             }
+            addMarkersToMap(); 
         });
         
+        //links clicked
+        $("#getLocLink").click(function(event) {
+            addCurrentLocationToMap();
+        });
+        $("#placeMarkLink").click(function(event) {
+            addMarkersToMap();
+        });
+
+
   
 
 
